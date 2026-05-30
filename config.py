@@ -1,16 +1,5 @@
-# Configurações gerais
-TAMANHO_BLOCO = 32
-ALTURA_HUD = 56
+LARGURA = 900
+ALTURA = 950
 FPS = 60
 
-# Velocidades em pixels por segundo
-VELOCIDADE_PACMAN = 145
-VELOCIDADE_FANTASMA = 110
-
-# Cores
-COR_FUNDO = (0, 0, 0)
-COR_PAREDE = (20, 40, 210)
-COR_PASTILHA = (255, 220, 180)
-COR_PACMAN = (255, 230, 0)
-COR_TEXTO = (255, 255, 255)
-COR_HUD = (15, 15, 15)
+COR_FUNDO = (0, 0, 0) #PRETO
