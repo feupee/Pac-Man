@@ -1,3 +1,6 @@
+import math
+import numpy as np
+
 # 0 = retângulo preto vazio,
 # 1 = pilula pequena,
 # 2 = pilula grande,
@@ -43,3 +46,51 @@ boards = [
 [3, 7, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8, 3],
 [7, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8]
          ]
+
+angulo = math.radians(180)
+
+fator = [
+    [math.cos(angulo), -math.sin(angulo), 0],
+    [math.sin(angulo),  math.cos(angulo), 0],
+    [0,                 0,                1],
+]
+
+def rotacionar_board_180(board):
+    """
+    Cria uma cópia do tabuleiro rotacionada em 180 graus.
+
+    A posição de cada célula é alterada e os códigos das curvas
+    são substituídos para preservar a orientação visual correta.
+    """
+
+    conversao_blocos = {
+        0: 0,  # espaço vazio
+        1: 1,  # pílula pequena
+        2: 2,  # pílula grande
+        3: 3,  # parede vertical
+        4: 4,  # parede horizontal
+        5: 7,  # curva superior direita -> curva inferior esquerda
+        6: 8,  # curva superior esquerda -> curva inferior direita
+        7: 5,  # curva inferior esquerda -> curva superior direita
+        8: 6,  # curva inferior direita -> curva superior esquerda
+        9: 9,  # portão horizontal
+    }
+
+    quantidade_linhas = len(board)
+    quantidade_colunas = len(board[0])
+
+    board_rotacionado = [
+        [0 for _ in range(quantidade_colunas)]
+        for _ in range(quantidade_linhas)
+    ]
+
+    for linha in range(quantidade_linhas):
+        for coluna in range(quantidade_colunas):
+            nova_linha = quantidade_linhas - 1 - linha
+            nova_coluna = quantidade_colunas - 1 - coluna
+
+            bloco_original = board[linha][coluna]
+            board_rotacionado[nova_linha][nova_coluna] = conversao_blocos[bloco_original]
+
+    return board_rotacionado
+
