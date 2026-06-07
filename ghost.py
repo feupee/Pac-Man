@@ -65,11 +65,11 @@ class Ghost:
 
     def check_collisions(self):
         # R, L, U, D
-        num1 = ((config.HEIGHT - 50) // 32)
-        num2 = (config.WIDTH // 30)
+        num1 = config.CELL_HEIGHT
+        num2 = config.CELL_WIDTH
         num3 = 15
         self.turns = [False, False, False, False]
-        if 0 < self.center_x // 30 < 29:
+        if 0 < self.center_x // config.CELL_WIDTH < config.BOARD_COLUMNS - 1:
             if self.level[(self.center_y - num3) // num1][self.center_x // num2] == 9:
                 self.turns[2] = True
             if self.level[self.center_y // num1][(self.center_x - num3) // num2] < 3 \
@@ -271,8 +271,8 @@ class Ghost:
                 else:
                     self.y_pos += self.speed
         if self.x_pos < -30:
-            self.x_pos = config.WIDTH
-        elif self.x_pos > config.WIDTH:
+            self.x_pos = config.BOARD_WIDTH
+        elif self.x_pos > config.BOARD_WIDTH:
             self.x_pos = -30
         return self.x_pos, self.y_pos, self.direction
 
@@ -377,8 +377,8 @@ class Ghost:
             elif self.turns[3]:
                 self.y_pos += self.speed
         if self.x_pos < -30:
-            self.x_pos = config.WIDTH
-        elif self.x_pos > config.WIDTH:
+            self.x_pos = config.BOARD_WIDTH
+        elif self.x_pos > config.BOARD_WIDTH:
             self.x_pos = -30
         return self.x_pos, self.y_pos, self.direction
 
@@ -499,8 +499,8 @@ class Ghost:
             elif self.turns[3]:
                 self.y_pos += self.speed
         if self.x_pos < -30:
-            self.x_pos = config.WIDTH
-        elif self.x_pos > config.WIDTH:
+            self.x_pos = config.BOARD_WIDTH
+        elif self.x_pos > config.BOARD_WIDTH:
             self.x_pos = -30
         return self.x_pos, self.y_pos, self.direction
 
@@ -624,8 +624,8 @@ class Ghost:
                 else:
                     self.y_pos += self.speed
         if self.x_pos < -30:
-            self.x_pos = config.WIDTH
-        elif self.x_pos > config.WIDTH:
+            self.x_pos = config.BOARD_WIDTH
+        elif self.x_pos > config.BOARD_WIDTH:
             self.x_pos = -30
         return self.x_pos, self.y_pos, self.direction
 
@@ -651,12 +651,12 @@ def calculate_ghost_speeds(powerup, eaten_ghost, dead_flags):
 
 def get_targets(player_x, player_y, powerup, eaten_ghost, blinky, inky, pinky, clyde):
     """Define o alvo perseguido por cada fantasma."""
-    if player_x < 450:
-        runaway_x = 900
+    if player_x < config.BOARD_WIDTH // 2:
+        runaway_x = config.BOARD_WIDTH
     else:
         runaway_x = 0
-    if player_y < 450:
-        runaway_y = 900
+    if player_y < config.BOARD_HEIGHT // 2:
+        runaway_y = config.BOARD_HEIGHT
     else:
         runaway_y = 0
     return_target = (380, 400)

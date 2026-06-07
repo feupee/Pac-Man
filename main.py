@@ -7,10 +7,43 @@ import config
 from board import boards, rotacionar_board_180
 from ghost import Ghost, calculate_ghost_speeds, get_targets
 from pacman import Pacman
+from start_screen import draw_start_screen
 
+def load_sounds():
+    sounds = {}
+
+    for name,path in config.SOUND_PATHS.items():
+        try:
+            sounds[name] = pygame.mixer.Sound(path)
+            print(f'Som carregado: {name} -> {path}')
+        except (FileNotFoundError,pygame.error) as error:
+            sounds[name] = None
+            print(f'Erro ao carregar o som: {name} -> {path}')
+            print(error)
+
+    return sounds
+
+
+def play_sound(sounds,name):
+    sound = sounds.get(name)
+
+    if sound:
+        sound.play()
 
 def load_scaled_image(path, size):
     return pygame.transform.scale(pygame.image.load(path), size)
+
+
+def load_font(path, size, fallback_path=None):
+    """Carrega uma fonte personalizada e usa uma alternativa quando necessário."""
+    for candidate in (path, fallback_path):
+        if candidate:
+            try:
+                return pygame.font.Font(candidate, size)
+            except (FileNotFoundError, OSError):
+                pass
+
+    return pygame.font.Font(None, size)
 
 
 def load_player_images():
@@ -53,28 +86,221 @@ def create_initial_ghost_state():
     }
 
 
-def draw_misc(screen, font, score, powerup, lives, game_over, game_won, player_images):
-    score_text = font.render(f'Score: {score}', True, 'white')
-    screen.blit(score_text, (10, 920))
+def draw_misc(
+    screen,
+    font,
+    score_font,
+    score,
+    high_score,
+    powerup,
+    lives,
+    game_over,
+    game_won,
+    player_images
+):
+    center_x = screen.get_width() // 2
+
+    def draw_text(text, selected_font, color, x, y, center=False):
+        # False mantém o aspecto pixelado da fonte.
+        text_surface = selected_font.render(str(text), False, color)
+        text_rect = text_surface.get_rect()
+
+        if center:
+            text_rect.center = (x, y)
+        else:
+            text_rect.topleft = (x, y)
+
+        screen.blit(text_surface, text_rect)
+
+    def format_score(value):
+        # Mostra pelo menos dois dígitos.
+        return f'{value:02d}'
+
+    # Interface superior inspirada no arcade original.
+    title_y = 18
+    value_y = 48
+
+    draw_text(
+        '1UP',
+        score_font,
+        config.WHITE,
+        center_x - 280,
+        title_y,
+        center=True
+    )
+
+    draw_text(
+        'HIGH SCORE',
+        score_font,
+        config.WHITE,
+        center_x,
+        title_y,
+        center=True
+    )
+
+    draw_text(
+        '2UP',
+        score_font,
+        config.WHITE,
+        center_x + 280,
+        title_y,
+        center=True
+    )
+
+    draw_text(
+        format_score(score),
+        score_font,
+        config.WHITE,
+        center_x - 280,
+        value_y,
+        center=True
+    )
+
+    draw_text(
+        format_score(high_score),
+        score_font,
+        config.WHITE,
+        center_x,
+        value_y,
+        center=True
+    )
+
+    draw_text(
+        '00',
+        score_font,
+        config.WHITE,
+        center_x + 280,
+        value_y,
+        center=True
+    )
+
     if powerup:
-        pygame.draw.circle(screen, 'blue', (140, 930), 15)
-    for i in range(lives):
-        screen.blit(pygame.transform.scale(player_images[0], config.LIFE_SPRITE_SIZE), (650 + i * 40, 915))
+        pygame.draw.circle(
+            screen,
+            'blue',
+            (center_x + 350, value_y),
+            7
+        )
+
+    # Interface inferior.
+    footer_top = config.TOP_UI_HEIGHT + config.BOARD_HEIGHT
+
+    life_width = config.LIFE_SPRITE_SIZE[0]
+    life_height = config.LIFE_SPRITE_SIZE[1]
+
+    life_sprite_y = (
+        footer_top
+        + (config.BOTTOM_UI_HEIGHT - life_height) // 2
+    )
+
+    life_sprite = pygame.transform.scale(
+        player_images[0],
+        config.LIFE_SPRITE_SIZE
+    )
+
+    for index in range(lives):
+        screen.blit(
+            life_sprite,
+            (
+                20 + index * (life_width + 10),
+                life_sprite_y
+            )
+        )
+
+    # Mensagens sobrepostas ao centro do tabuleiro.
+    message_width = 680
+    message_height = 130
+
+    message_x = (screen.get_width() - message_width) // 2
+    message_y = (
+        config.TOP_UI_HEIGHT
+        + (config.BOARD_HEIGHT - message_height) // 2
+    )
+
     if game_over:
-        pygame.draw.rect(screen, 'white', [50, 200, 800, 300], 0, 10)
-        pygame.draw.rect(screen, 'dark gray', [70, 220, 760, 260], 0, 10)
-        gameover_text = font.render('Game over! Space bar to restart!', True, 'red')
-        screen.blit(gameover_text, (100, 300))
+        pygame.draw.rect(
+            screen,
+            'white',
+            [message_x, message_y, message_width, message_height],
+            0,
+            10
+        )
+
+        pygame.draw.rect(
+            screen,
+            'dark gray',
+            [
+                message_x + 10,
+                message_y + 10,
+                message_width - 20,
+                message_height - 20
+            ],
+            0,
+            10
+        )
+
+        draw_text(
+            'GAME OVER',
+            font,
+            'red',
+            center_x,
+            message_y + 45,
+            center=True
+        )
+
+        draw_text(
+            'PRESS SPACE TO RESTART',
+            font,
+            config.WHITE,
+            center_x,
+            message_y + 88,
+            center=True
+        )
+
     if game_won:
-        pygame.draw.rect(screen, 'white', [50, 200, 800, 300], 0, 10)
-        pygame.draw.rect(screen, 'dark gray', [70, 220, 760, 260], 0, 10)
-        gameover_text = font.render('Victory! Space bar to restart!', True, 'green')
-        screen.blit(gameover_text, (100, 300))
+        pygame.draw.rect(
+            screen,
+            'white',
+            [message_x, message_y, message_width, message_height],
+            0,
+            10
+        )
+
+        pygame.draw.rect(
+            screen,
+            'dark gray',
+            [
+                message_x + 10,
+                message_y + 10,
+                message_width - 20,
+                message_height - 20
+            ],
+            0,
+            10
+        )
+
+        draw_text(
+            'VICTORY',
+            font,
+            'green',
+            center_x,
+            message_y + 45,
+            center=True
+        )
+
+        draw_text(
+            'PRESS SPACE TO RESTART',
+            font,
+            config.WHITE,
+            center_x,
+            message_y + 88,
+            center=True
+        )
 
 
 def draw_board(screen, level, flicker):
-    num1 = (config.HEIGHT - config.BOARD_BOTTOM_MARGIN) // config.BOARD_ROWS
-    num2 = config.WIDTH // config.BOARD_COLUMNS
+    num1 = config.CELL_HEIGHT
+    num2 = config.CELL_WIDTH
     pi = math.pi
 
     for i in range(len(level)):
@@ -206,15 +432,80 @@ def has_player_won(level):
     return True
 
 
+
+def calculate_initial_display_size():
+    """Calcula uma janela visível que caiba no monitor sem alterar a lógica do jogo."""
+    display_info = pygame.display.Info()
+    max_width = int(display_info.current_w * config.DISPLAY_MAX_USAGE)
+    max_height = int(display_info.current_h * config.DISPLAY_MAX_USAGE)
+
+    scale = min(
+        max_width / config.WINDOW_WIDTH,
+        max_height / config.WINDOW_HEIGHT,
+        1.0,
+    )
+
+    return (
+        max(1, int(config.WINDOW_WIDTH * scale)),
+        max(1, int(config.WINDOW_HEIGHT * scale)),
+    )
+
+
+def present_frame(screen, game_surface):
+    """Redimensiona o quadro inteiro preservando sua proporção e o estilo pixelado."""
+    screen_width, screen_height = screen.get_size()
+    logical_width, logical_height = game_surface.get_size()
+
+    scale = min(
+        screen_width / logical_width,
+        screen_height / logical_height,
+    )
+
+    scaled_size = (
+        max(1, int(logical_width * scale)),
+        max(1, int(logical_height * scale)),
+    )
+
+    scaled_frame = pygame.transform.scale(game_surface, scaled_size)
+    frame_x = (screen_width - scaled_size[0]) // 2
+    frame_y = (screen_height - scaled_size[1]) // 2
+
+    screen.fill('black')
+    screen.blit(scaled_frame, (frame_x, frame_y))
+    pygame.display.flip()
+
 def main():
+    pygame.mixer.pre_init(44100,-16,2,512)
     pygame.init()
 
-    screen = pygame.display.set_mode([config.WIDTH, config.HEIGHT])
+    display_size = calculate_initial_display_size()
+    screen = pygame.display.set_mode(display_size, pygame.RESIZABLE)
+    game_surface = pygame.Surface([config.WINDOW_WIDTH, config.WINDOW_HEIGHT])
+    board_surface = pygame.Surface([config.BOARD_WIDTH, config.BOARD_HEIGHT])
+    pygame.display.set_caption('Pac-Man')
     timer = pygame.time.Clock()
-    font = pygame.font.Font(config.FONT_PATH, config.FONT_SIZE)
+    font = load_font(config.FONT_PATH, config.FONT_SIZE)
+    title_font = load_font(config.FONT_PATH_MENU, config.MENU_TITLE_FONT_SIZE, config.FONT_PATH)
+    subtitle_font = load_font(config.FONT_PATH_MENU, 33)
+    menu_font = load_font(config.FONT_PATH_MENU, config.MENU_TEXT_FONT_SIZE, config.FONT_PATH)
+    score_font = load_font(config.FONT_PATH_MENU, 22, config.FONT_PATH)
+
+    game_state = 'menu'
 
     player_images = load_player_images()
     ghost_images = load_ghost_images()
+    sounds = load_sounds()
+
+    powerup_channel = pygame.mixer.Channel(1)
+
+    if sounds['start_game']:
+        sounds['start_game'].set_volume(0.10)
+
+    if sounds['power_up']:
+        sounds['power_up'].set_volume(0.05)
+
+    if sounds['eating']:
+        sounds['eating'].set_volume(0.08)
 
     level = copy.deepcopy(boards)
     #level = rotacionar_board_180(copy.deepcopy(boards)) 
@@ -226,7 +517,6 @@ def main():
     # R, L, U, D
     turns_allowed = [False, False, False, False]
     direction_command = config.PLAYER_START_DIRECTION
-    score = 0
     powerup = False
     power_counter = 0
     eaten_ghost = [False, False, False, False]
@@ -236,10 +526,14 @@ def main():
     lives = config.INITIAL_LIVES
     game_over = False
     game_won = False
+    high_score = 0
+    score = 0
+    death_counter = 0
 
     run = True
     while run:
         timer.tick(config.FPS)
+
         if counter < 19:
             counter += 1
             if counter > 3:
@@ -247,20 +541,103 @@ def main():
         else:
             counter = 0
             flicker = True
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+
+            if event.type == pygame.VIDEORESIZE:
+                screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    run = False
+
+                if game_state == 'menu':
+                    if event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                        game_state = 'playing'
+                        startup_counter = 0
+                        play_sound(sounds,'start_game')
+
+                elif game_state == 'playing':
+                    if event.key == pygame.K_RIGHT:
+                        direction_command = 0
+                    if event.key == pygame.K_LEFT:
+                        direction_command = 1
+                    if event.key == pygame.K_UP:
+                        direction_command = 2
+                    if event.key == pygame.K_DOWN:
+                        direction_command = 3
+                    if event.key == pygame.K_SPACE and (game_over or game_won):
+                        powerup = False
+                        power_counter = 0
+                        startup_counter = 0
+                        direction_command = config.PLAYER_START_DIRECTION
+                        ghost_state = reset_round(player)
+                        eaten_ghost = [False, False, False, False]
+                        score = 0
+                        lives = config.INITIAL_LIVES
+                        level = copy.deepcopy(boards)
+                        game_over = False
+                        game_won = False
+
+                    if event.key == pygame.K_r:
+                        lives = config.INITIAL_LIVES
+                        score = 0
+                        level = copy.deepcopy(boards)
+
+                        startup_counter = 0
+                        powerup = False
+                        power_counter = 0
+                        eaten_ghost = [False, False, False, False]
+
+                        direction_command = config.PLAYER_START_DIRECTION
+                        ghost_state = reset_round(player)
+
+                        game_over = False
+                        game_won = False
+
+            if event.type == pygame.KEYUP and game_state == 'playing':
+                if event.key == pygame.K_RIGHT and direction_command == 0:
+                    direction_command = player.direction
+                if event.key == pygame.K_LEFT and direction_command == 1:
+                    direction_command = player.direction
+                if event.key == pygame.K_UP and direction_command == 2:
+                    direction_command = player.direction
+                if event.key == pygame.K_DOWN and direction_command == 3:
+                    direction_command = player.direction
+
+        if not run:
+            break
+
+
+        if score > high_score:
+            high_score = score
+
+
+        if game_state == 'menu':
+            draw_start_screen(game_surface, title_font, subtitle_font, menu_font, score_font, player_images, ghost_images, counter)
+            present_frame(screen, game_surface)
+            continue
+
         if powerup and power_counter < config.POWERUP_DURATION:
             power_counter += 1
         elif powerup and power_counter >= config.POWERUP_DURATION:
             power_counter = 0
             powerup = False
             eaten_ghost = [False, False, False, False]
+
         if startup_counter < config.STARTUP_DELAY and not game_over and not game_won:
             moving = False
             startup_counter += 1
+        elif game_over or game_won:
+            moving = False
         else:
             moving = True
 
-        screen.fill('black')
-        draw_board(screen, level, flicker)
+        game_surface.fill('black')
+        board_surface.fill('black')
+        draw_board(board_surface, level, flicker)
 
         dead_flags = [
             ghost_state['blinky']['dead'],
@@ -271,10 +648,10 @@ def main():
         ghost_speeds = calculate_ghost_speeds(powerup, eaten_ghost, dead_flags)
         game_won = has_player_won(level)
 
-        player_circle = pygame.draw.circle(screen, 'black', (player.center_x, player.center_y), 20, 2)
-        player.draw(screen, counter)
+        player_circle = pygame.draw.circle(board_surface, 'black', (player.center_x, player.center_y), 20, 2)
+        player.draw(board_surface, counter)
         ghosts = create_ghosts(
-            screen,
+            board_surface,
             level,
             targets,
             ghost_speeds,
@@ -286,7 +663,19 @@ def main():
         )
         blinky, inky, pinky, clyde = ghosts
 
-        draw_misc(screen, font, score, powerup, lives, game_over, game_won, player_images)
+        game_surface.blit(board_surface, (0, config.TOP_UI_HEIGHT))
+        draw_misc(
+    game_surface,
+    font,
+    score_font,
+    score,
+    high_score,
+    powerup,
+    lives,
+    game_over,
+    game_won,
+    player_images
+)
         targets = get_targets(player.x_pos, player.y_pos, powerup, eaten_ghost, blinky, inky, pinky, clyde)
 
         turns_allowed = player.check_position(level)
@@ -294,9 +683,26 @@ def main():
             player.move(turns_allowed)
             move_ghosts(ghosts, ghost_state)
 
-        score, powerup, power_counter, eaten_ghost = player.check_pellet_collisions(
-            level, score, powerup, power_counter, eaten_ghost
+        previous_score = score
+        previous_powerup = powerup
+        previous_power_counter = power_counter
+
+        score,powerup,power_counter,eaten_ghost = player.check_pellet_collisions(
+            level,score,powerup,power_counter,eaten_ghost
         )
+
+        collected_powerup = (
+            powerup
+            and (
+                not previous_powerup
+                or power_counter < previous_power_counter
+            )
+        )
+
+        if collected_powerup and sounds['power_up']:
+            powerup_channel.play(sounds['power_up'])
+        elif score > previous_score:
+            play_sound(sounds,'eating')
 
         if player_hit_by_ghost(player_circle, ghosts, powerup, eaten_ghost):
             if lives > 0:
@@ -304,67 +710,29 @@ def main():
                 startup_counter = 0
                 powerup = False
                 power_counter = 0
-                direction_command = config.PLAYER_START_DIRECTION
+                play_sound(sounds,'death')
+                if death_counter < config.DEATH_ANIMATION_DURATION:
+                    death_counter += 1
+                elif death_counter >= config.DEATH_ANIMATION_DURATION:
+                    death_counter = 0
                 ghost_state = reset_round(player)
                 eaten_ghost = [False, False, False, False]
+                direction_command = config.PLAYER_START_DIRECTION
             else:
                 game_over = True
                 moving = False
                 startup_counter = 0
+                play_sound(sounds,'death')
+                if death_counter < config.DEATH_ANIMATION_DURATION:
+                    death_counter += 1
+                elif death_counter >= config.DEATH_ANIMATION_DURATION:
+                    death_counter = 0
         elif powerup:
             score = eat_available_ghosts(player_circle, ghosts, ghost_state, eaten_ghost, score)
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                run = False
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RIGHT:
-                    direction_command = 0
-                if event.key == pygame.K_LEFT:
-                    direction_command = 1
-                if event.key == pygame.K_UP:
-                    direction_command = 2
-                if event.key == pygame.K_DOWN:
-                    direction_command = 3
-                if event.key == pygame.K_SPACE and (game_over or game_won):
-                    powerup = False
-                    power_counter = 0
-                    startup_counter = 0
-                    direction_command = config.PLAYER_START_DIRECTION
-                    ghost_state = reset_round(player)
-                    eaten_ghost = [False, False, False, False]
-                    score = 0
-                    lives = config.INITIAL_LIVES
-                    level = copy.deepcopy(boards)
-                    game_over = False
-                    game_won = False
-
-                if event.key == pygame.K_r:
-                    lives = config.INITIAL_LIVES
-                    score = 0
-                    level = copy.deepcopy(boards)
-
-                    startup_counter = 0
-                    powerup = False
-                    power_counter = 0
-                    eaten_ghost = [False, False, False, False]
-
-                    direction_command = config.PLAYER_START_DIRECTION
-                    ghost_state = reset_round(player)
-
-                    game_over = False
-                    game_won = False    
-
-            if event.type == pygame.KEYUP:
-                if event.key == pygame.K_RIGHT and direction_command == 0:
-                    direction_command = player.direction
-                if event.key == pygame.K_LEFT and direction_command == 1:
-                    direction_command = player.direction
-                if event.key == pygame.K_UP and direction_command == 2:
-                    direction_command = player.direction
-                if event.key == pygame.K_DOWN and direction_command == 3:
-                    direction_command = player.direction
-
+        if score > high_score: 
+            high_score = score
+    
         if direction_command == 0 and turns_allowed[0]:
             player.direction = 0
         if direction_command == 1 and turns_allowed[1]:
@@ -380,8 +748,10 @@ def main():
             if ghost.in_box and ghost_state[name]['dead']:
                 ghost_state[name]['dead'] = False
 
-        pygame.display.flip()
+        present_frame(screen, game_surface)
+
     pygame.quit()
+
 
 if __name__ == '__main__':
     main()

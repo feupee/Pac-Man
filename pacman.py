@@ -36,14 +36,14 @@ class Pacman:
 
     def check_position(self, level):
         turns = [False, False, False, False]
-        num1 = (config.HEIGHT - config.BOARD_BOTTOM_MARGIN) // config.BOARD_ROWS
-        num2 = config.WIDTH // config.BOARD_COLUMNS
+        num1 = config.CELL_HEIGHT
+        num2 = config.CELL_WIDTH
         num3 = 15
         centerx = self.center_x
         centery = self.center_y
 
         # check collisions based on center x and center y of player +/- fudge number
-        if centerx // 30 < 29:
+        if centerx // config.CELL_WIDTH < config.BOARD_COLUMNS - 1:
             if self.direction == 0:
                 if level[centery // num1][(centerx - num3) // num2] < 3:
                     turns[1] = True
@@ -97,10 +97,10 @@ class Pacman:
             self.y_pos += self.speed
 
     def check_pellet_collisions(self, level, score, powerup, power_counter, eaten_ghosts):
-        num1 = (config.HEIGHT - config.BOARD_BOTTOM_MARGIN) // config.BOARD_ROWS
-        num2 = config.WIDTH // config.BOARD_COLUMNS
+        num1 = config.CELL_HEIGHT
+        num2 = config.CELL_WIDTH
 
-        if 0 < self.x_pos < 870:
+        if 0 < self.x_pos < config.BOARD_WIDTH - config.CELL_WIDTH:
             if level[self.center_y // num1][self.center_x // num2] == 1:
                 level[self.center_y // num1][self.center_x // num2] = 0
                 score += 10
@@ -114,10 +114,10 @@ class Pacman:
         return score, powerup, power_counter, eaten_ghosts
 
     def apply_tunnel_wrap(self):
-        if self.x_pos > config.WIDTH:
+        if self.x_pos > config.BOARD_WIDTH:
             self.x_pos = -47
         elif self.x_pos < -50:
-            self.x_pos = 897
+            self.x_pos = config.BOARD_WIDTH - 3
 
     def reset_position(self):
         self.x_pos = config.PLAYER_START_X

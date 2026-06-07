@@ -1,21 +1,56 @@
 # Configurações fixas da janela
-WIDTH = 900
-HEIGHT = 950
+WINDOW_WIDTH = 900
+
+#Caminhos sons
+SOUND_PATHS = {
+    'start_game': 'sounds/start_game.mp3',
+    'eating': 'sounds/eating.mp3',
+    'press_start': 'sounds/press_start.mp3',
+    'death': 'sounds/dead.mp3',
+    'power_up': 'sounds/power_up.mp3',
+}
+
+#Cores
+WHITE = (255, 255, 255)
+RED = (255, 0, 0)
+PINK = (255, 255, 255)
+CYAN = (0, 255, 255)
+ORANGE = (255, 184, 82)
+PELLET_COLOR = (255, 184, 174)
+
+# Espaços lógicos livres acima e abaixo do mapa para a interface
+# Essas áreas são preservadas mesmo quando a janela visível é reduzida.
+TOP_UI_HEIGHT = 64
+BOTTOM_UI_HEIGHT = 64
+
+# A janela visível ocupa no máximo esta proporção da resolução do monitor.
+# Reduza o valor para criar uma janela ainda menor.
+DISPLAY_MAX_USAGE = 0.85
+
 FPS = 60
 FONT_PATH = 'freesansbold.ttf'
+FONT_PATH_MENU = 'fonts/Joystix_W00_Proportional.ttf'
 FONT_SIZE = 20
+MENU_TITLE_FONT_SIZE = 72
+MENU_TEXT_FONT_SIZE = 20
 BOARD_COLOR = 'blue'
 
 # Configurações fixas do tabuleiro
-BOARD_BOTTOM_MARGIN = 50
-BOARD_ROWS = 32
+BOARD_ROWS = 33
 BOARD_COLUMNS = 30
+CELL_WIDTH = 30
+CELL_HEIGHT = 28
+BOARD_WIDTH = BOARD_COLUMNS * CELL_WIDTH
+BOARD_HEIGHT = BOARD_ROWS * CELL_HEIGHT
+
+# Altura total da janela: interface superior + mapa + interface inferior
+WINDOW_HEIGHT = TOP_UI_HEIGHT + BOARD_HEIGHT + BOTTOM_UI_HEIGHT
 
 # Configurações fixas do Pac-Man
-PLAYER_START_X = 450
+PLAYER_START_X = 430
 PLAYER_START_Y = 663
 PLAYER_START_DIRECTION = 0
-PLAYER_SPEED = 2
+PLAYER_SPEED = 3
 PLAYER_SPRITE_SIZE = (45, 45)
 LIFE_SPRITE_SIZE = (30, 30)
 PLAYER_IMAGE_PATHS = [
@@ -30,10 +65,10 @@ GHOST_DEFAULT_SPEED = 2
 GHOST_POWERUP_SPEED = 1
 GHOST_DEAD_SPEED = 4
 GHOST_STARTS = {
-    'blinky': {'x': 56, 'y': 58, 'direction': 0},
-    'inky': {'x': 440, 'y': 388, 'direction': 2},
-    'pinky': {'x': 440, 'y': 438, 'direction': 2},
-    'clyde': {'x': 440, 'y': 438, 'direction': 2},
+    'blinky': {'x': 425, 'y': 325, 'direction': 0},
+    'inky': {'x': 490, 'y': 410, 'direction': 1},
+    'pinky': {'x': 430, 'y': 410, 'direction': 2},
+    'clyde': {'x': 370, 'y': 410, 'direction': 3},
 }
 GHOST_IMAGE_PATHS = {
     # Cada direção possui dois frames de animação.
@@ -74,5 +109,8 @@ GHOST_IMAGE_PATHS = {
 
 # Configurações fixas da partida
 INITIAL_LIVES = 3
-POWERUP_DURATION = 600
-STARTUP_DELAY = 180
+POWERUP_DURATION = 480
+STARTUP_DELAY = 270
+DEATH_ANIMATION_DURATION = 120
+
+# FPS * segundos = número de frames
