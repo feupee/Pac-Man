@@ -114,3 +114,15 @@ STARTUP_DELAY = 270
 DEATH_ANIMATION_DURATION = 120
 
 # FPS * segundos = número de frames
+
+# Configurações do jogador
+PLAYER_DEFAULT_NAME = 'PLAYER ONE'
+PLAYER_NAME_MAX_LENGTH = 10
+PLAYER_NAME_ALLOWED_CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 '
+
+# Configurações do leaderboard
+LEADERBOARD_FILE = 'leaderboard.json'
+LEADERBOARD_SIZE = 5
+
+# Cor adicional utilizada no menu
+YELLOW = (255,255,0)

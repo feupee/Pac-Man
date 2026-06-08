@@ -7,7 +7,8 @@ import config
 from board import boards, rotacionar_board_180
 from ghost import Ghost, calculate_ghost_speeds, get_targets
 from pacman import Pacman
-from start_screen import draw_start_screen
+from leaderboard import add_score, load_leaderboard
+from start_screen import draw_leaderboard_screen, draw_start_screen
 
 def load_sounds():
     sounds = {}
@@ -96,6 +97,7 @@ def draw_misc(
     lives,
     game_over,
     game_won,
+    ready,
     player_images
 ):
     center_x = screen.get_width() // 2
@@ -249,7 +251,7 @@ def draw_misc(
         )
 
         draw_text(
-            'PRESS SPACE TO RESTART',
+            'PRESS SPACE FOR MENU',
             font,
             config.WHITE,
             center_x,
@@ -289,11 +291,21 @@ def draw_misc(
         )
 
         draw_text(
-            'PRESS SPACE TO RESTART',
+            'PRESS SPACE FOR MENU',
             font,
             config.WHITE,
             center_x,
             message_y + 88,
+            center=True
+        )
+
+    if ready:
+        draw_text(
+            'READY!',
+            score_font,
+            'yellow',
+            center_x,
+            config.TOP_UI_HEIGHT + config.BOARD_HEIGHT // 2 + 60,
             center=True
         )
 
@@ -336,7 +348,7 @@ def draw_board(screen, level, flicker):
                                  (j * num2 + num2, i * num1 + (0.5 * num1)), 3)
 
 
-def create_ghosts(screen, level, targets, speeds, ghost_images, ghost_state, powerup, eaten_ghost, counter):
+def create_ghosts(screen, level, targets, speeds, ghost_images, ghost_state, powerup, eaten_ghost, counter, visible=True):
     common_arguments = {
         'screen': screen,
         'level': level,
@@ -345,6 +357,7 @@ def create_ghosts(screen, level, targets, speeds, ghost_images, ghost_state, pow
         'spooked_images': ghost_images['spooked'],
         'dead_images': ghost_images['dead'],
         'counter': counter,
+        'visible': visible,
     }
 
     blinky = Ghost(
@@ -526,7 +539,18 @@ def main():
     lives = config.INITIAL_LIVES
     game_over = False
     game_won = False
-    high_score = 0
+    player_name = config.PLAYER_DEFAULT_NAME
+    name_buffer = player_name
+    editing_name = False
+
+    leaderboard = load_leaderboard()
+
+    if leaderboard:
+        high_score = leaderboard[0]['score']
+    else:
+        high_score = 0
+
+    score_registered = False
     score = 0
     death_counter = 0
 
@@ -551,13 +575,68 @@ def main():
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    run = False
+                    if game_state == 'leaderboard':
+                        game_state = 'menu'
+
+                    elif game_state == 'menu' and editing_name:
+                        name_buffer = player_name
+                        editing_name = False
+
+                    else:
+                        run = False
+
+                    continue
 
                 if game_state == 'menu':
-                    if event.key in (pygame.K_RETURN, pygame.K_SPACE):
-                        game_state = 'playing'
-                        startup_counter = 0
-                        play_sound(sounds,'start_game')
+                    if editing_name:
+                        if event.key == pygame.K_RETURN:
+                            player_name = (
+                                name_buffer.strip()
+                                or config.PLAYER_DEFAULT_NAME
+                            )
+
+                            name_buffer = player_name
+                            editing_name = False
+
+                        elif event.key == pygame.K_BACKSPACE:
+                            name_buffer = name_buffer[:-1]
+
+                        else:
+                            typed_character = event.unicode.upper()
+
+                            valid_character = (
+                                typed_character
+                                in config.PLAYER_NAME_ALLOWED_CHARACTERS
+                            )
+
+                            has_available_space = (
+                                len(name_buffer)
+                                < config.PLAYER_NAME_MAX_LENGTH
+                            )
+
+                            if valid_character and has_available_space:
+                                name_buffer += typed_character
+
+                    else:
+                        if event.key in (pygame.K_1,pygame.K_KP1):
+                            name_buffer = player_name
+                            editing_name = True
+
+                        elif event.key in (pygame.K_2,pygame.K_KP2):
+                            game_state = 'leaderboard'
+
+                        elif event.key in (pygame.K_RETURN,pygame.K_SPACE):
+                            game_state = 'playing'
+                            startup_counter = 0
+                            score_registered = False
+                            play_sound(sounds,'start_game')
+
+                elif game_state == 'leaderboard':
+                    if event.key in (
+                        pygame.K_RETURN,
+                        pygame.K_BACKSPACE
+                    ):
+                        game_state = 'menu'
 
                 elif game_state == 'playing':
                     if event.key == pygame.K_RIGHT:
@@ -580,6 +659,8 @@ def main():
                         level = copy.deepcopy(boards)
                         game_over = False
                         game_won = False
+                        score_registered = False
+                        game_state = 'menu'
 
                     if event.key == pygame.K_r:
                         lives = config.INITIAL_LIVES
@@ -596,6 +677,8 @@ def main():
 
                         game_over = False
                         game_won = False
+
+                        score_registered = False
 
             if event.type == pygame.KEYUP and game_state == 'playing':
                 if event.key == pygame.K_RIGHT and direction_command == 0:
@@ -616,8 +699,32 @@ def main():
 
 
         if game_state == 'menu':
-            draw_start_screen(game_surface, title_font, subtitle_font, menu_font, score_font, player_images, ghost_images, counter)
-            present_frame(screen, game_surface)
+            draw_start_screen(
+                game_surface,
+                title_font,
+                subtitle_font,
+                menu_font,
+                score_font,
+                player_images,
+                ghost_images,
+                counter,
+                player_name,
+                name_buffer,
+                editing_name
+            )
+
+            present_frame(screen,game_surface)
+            continue
+
+        if game_state == 'leaderboard':
+            draw_leaderboard_screen(
+                game_surface,
+                title_font,
+                menu_font,
+                leaderboard
+            )
+
+            present_frame(screen,game_surface)
             continue
 
         if powerup and power_counter < config.POWERUP_DURATION:
@@ -627,7 +734,9 @@ def main():
             powerup = False
             eaten_ghost = [False, False, False, False]
 
-        if startup_counter < config.STARTUP_DELAY and not game_over and not game_won:
+        startup_active = startup_counter < config.STARTUP_DELAY and not game_over and not game_won
+
+        if startup_active:
             moving = False
             startup_counter += 1
         elif game_over or game_won:
@@ -648,8 +757,11 @@ def main():
         ghost_speeds = calculate_ghost_speeds(powerup, eaten_ghost, dead_flags)
         game_won = has_player_won(level)
 
-        player_circle = pygame.draw.circle(board_surface, 'black', (player.center_x, player.center_y), 20, 2)
-        player.draw(board_surface, counter)
+        player_circle = pygame.Rect(player.center_x - 20, player.center_y - 20, 40, 40)
+
+        if not startup_active:
+            player.draw(board_surface, counter)
+
         ghosts = create_ghosts(
             board_surface,
             level,
@@ -659,23 +771,25 @@ def main():
             ghost_state,
             powerup,
             eaten_ghost,
-            counter
+            counter,
+            visible=not startup_active
         )
         blinky, inky, pinky, clyde = ghosts
 
         game_surface.blit(board_surface, (0, config.TOP_UI_HEIGHT))
         draw_misc(
-    game_surface,
-    font,
-    score_font,
-    score,
-    high_score,
-    powerup,
-    lives,
-    game_over,
-    game_won,
-    player_images
-)
+            game_surface,
+            font,
+            score_font,
+            score,
+            high_score,
+            powerup,
+            lives,
+            game_over,
+            game_won,
+            startup_active,
+            player_images
+        )
         targets = get_targets(player.x_pos, player.y_pos, powerup, eaten_ghost, blinky, inky, pinky, clyde)
 
         turns_allowed = player.check_position(level)
@@ -683,55 +797,65 @@ def main():
             player.move(turns_allowed)
             move_ghosts(ghosts, ghost_state)
 
-        previous_score = score
-        previous_powerup = powerup
-        previous_power_counter = power_counter
+        if moving:
+            previous_score = score
+            previous_powerup = powerup
+            previous_power_counter = power_counter
 
-        score,powerup,power_counter,eaten_ghost = player.check_pellet_collisions(
-            level,score,powerup,power_counter,eaten_ghost
-        )
-
-        collected_powerup = (
-            powerup
-            and (
-                not previous_powerup
-                or power_counter < previous_power_counter
+            score,powerup,power_counter,eaten_ghost = player.check_pellet_collisions(
+                level,score,powerup,power_counter,eaten_ghost
             )
-        )
 
-        if collected_powerup and sounds['power_up']:
-            powerup_channel.play(sounds['power_up'])
-        elif score > previous_score:
-            play_sound(sounds,'eating')
+            collected_powerup = (
+                powerup
+                and (
+                    not previous_powerup
+                    or power_counter < previous_power_counter
+                )
+            )
 
-        if player_hit_by_ghost(player_circle, ghosts, powerup, eaten_ghost):
-            if lives > 0:
-                lives -= 1
-                startup_counter = 0
-                powerup = False
-                power_counter = 0
-                play_sound(sounds,'death')
-                if death_counter < config.DEATH_ANIMATION_DURATION:
-                    death_counter += 1
-                elif death_counter >= config.DEATH_ANIMATION_DURATION:
-                    death_counter = 0
-                ghost_state = reset_round(player)
-                eaten_ghost = [False, False, False, False]
-                direction_command = config.PLAYER_START_DIRECTION
-            else:
-                game_over = True
-                moving = False
-                startup_counter = 0
-                play_sound(sounds,'death')
-                if death_counter < config.DEATH_ANIMATION_DURATION:
-                    death_counter += 1
-                elif death_counter >= config.DEATH_ANIMATION_DURATION:
-                    death_counter = 0
-        elif powerup:
-            score = eat_available_ghosts(player_circle, ghosts, ghost_state, eaten_ghost, score)
+            if collected_powerup and sounds['power_up']:
+                powerup_channel.play(sounds['power_up'])
+            elif score > previous_score:
+                play_sound(sounds,'eating')
+
+            if player_hit_by_ghost(player_circle, ghosts, powerup, eaten_ghost):
+                if lives > 0:
+                    lives -= 1
+                    startup_counter = 0
+                    powerup = False
+                    power_counter = 0
+                    play_sound(sounds,'death')
+                    if death_counter < config.DEATH_ANIMATION_DURATION:
+                        death_counter += 1
+                    elif death_counter >= config.DEATH_ANIMATION_DURATION:
+                        death_counter = 0
+                    ghost_state = reset_round(player)
+                    eaten_ghost = [False, False, False, False]
+                    direction_command = config.PLAYER_START_DIRECTION
+                else:
+                    game_over = True
+                    moving = False
+                    startup_counter = 0
+                    play_sound(sounds,'death')
+                    if death_counter < config.DEATH_ANIMATION_DURATION:
+                        death_counter += 1
+                    elif death_counter >= config.DEATH_ANIMATION_DURATION:
+                        death_counter = 0
+            elif powerup:
+                score = eat_available_ghosts(player_circle, ghosts, ghost_state, eaten_ghost, score)
 
         if score > high_score: 
             high_score = score
+
+        if (game_over or game_won) and not score_registered:
+            leaderboard = add_score(
+                leaderboard,
+                player_name,
+                score
+            )
+
+            score_registered = True
     
         if direction_command == 0 and turns_allowed[0]:
             player.direction = 0

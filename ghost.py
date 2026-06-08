@@ -20,7 +20,8 @@ class Ghost:
         eaten_ghost,
         spooked_images,
         dead_images,
-        counter
+        counter,
+        visible=True
     ):
         self.x_pos = x_coord
         self.y_pos = y_coord
@@ -47,7 +48,8 @@ class Ghost:
             (36, 36)
         )
 
-        self.draw(screen, counter)
+        if visible:
+            self.draw(screen, counter)
 
     def draw(self, screen, counter):
         # Cada direção possui dois frames de animação.
