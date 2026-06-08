@@ -126,3 +126,9 @@ LEADERBOARD_SIZE = 5
 
 # Cor adicional utilizada no menu
 YELLOW = (255,255,0)
+
+# Configurações da fruta bônus
+BONUS_START_X = 120
+BONUS_START_Y = 182
+BONUS_MIN_X = 120
+BONUS_MAX_X = 780

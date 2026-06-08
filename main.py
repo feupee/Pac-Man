@@ -9,6 +9,7 @@ from ghost import Ghost, calculate_ghost_speeds, get_targets
 from pacman import Pacman
 from leaderboard import add_score, load_leaderboard
 from start_screen import draw_leaderboard_screen, draw_start_screen
+from bonus import BonusFruit
 
 def load_sounds():
     sounds = {}
@@ -525,6 +526,13 @@ def main():
     player = Pacman(player_images)
     ghost_state = create_initial_ghost_state()
 
+    bonus = BonusFruit(
+        config.BONUS_START_X,
+        config.BONUS_START_Y,
+        config.BONUS_MIN_X,
+        config.BONUS_MAX_X
+    )
+
     counter = 0
     flicker = False
     # R, L, U, D
@@ -655,6 +663,7 @@ def main():
                         ghost_state = reset_round(player)
                         eaten_ghost = [False, False, False, False]
                         score = 0
+                        bonus.reset()
                         lives = config.INITIAL_LIVES
                         level = copy.deepcopy(boards)
                         game_over = False
@@ -674,6 +683,8 @@ def main():
 
                         direction_command = config.PLAYER_START_DIRECTION
                         ghost_state = reset_round(player)
+
+                        bonus.reset()
 
                         game_over = False
                         game_won = False
@@ -760,7 +771,8 @@ def main():
         player_circle = pygame.Rect(player.center_x - 20, player.center_y - 20, 40, 40)
 
         if not startup_active:
-            player.draw(board_surface, counter)
+            bonus.draw(board_surface)
+            player.draw(board_surface,counter)
 
         ghosts = create_ghosts(
             board_surface,
@@ -794,8 +806,9 @@ def main():
 
         turns_allowed = player.check_position(level)
         if moving:
+            bonus.update()
             player.move(turns_allowed)
-            move_ghosts(ghosts, ghost_state)
+            move_ghosts(ghosts,ghost_state)
 
         if moving:
             previous_score = score
@@ -805,6 +818,15 @@ def main():
             score,powerup,power_counter,eaten_ghost = player.check_pellet_collisions(
                 level,score,powerup,power_counter,eaten_ghost
             )
+
+            current_player_rect = pygame.Rect(
+                player.center_x - 20,
+                player.center_y - 20,
+                40,
+                40
+            )
+
+            score += bonus.collect_if_colliding(current_player_rect)
 
             collected_powerup = (
                 powerup
