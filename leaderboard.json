@@ -5,6 +5,10 @@
     },
     {
         "name": "PLAYER ONE",
+        "score": 3900
+    },
+    {
+        "name": "PLAYER ONE",
         "score": 3800
     },
     {
@@ -14,9 +18,5 @@
     {
         "name": "PLAYER ONE",
         "score": 800
-    },
-    {
-        "name": "TWESTH",
-        "score": 290
     }
 ]

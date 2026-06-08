@@ -216,15 +216,6 @@ def draw_misc(
             center=True
         )
 
-        draw_text(
-            'PRESS SPACE FOR MENU',
-            font,
-            config.WHITE,
-            center_x,
-            message_y + 88,
-            center=True
-        )
-
     if ready:
         draw_text(
             'READY!',

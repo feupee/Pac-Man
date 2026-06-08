@@ -157,10 +157,10 @@ def draw_start_screen(screen,title_font,subtitle_font,menu_font,score_font,playe
 
     # Valores das pastilhas.
     pellet_y = first_row_y + len(ghost_rows) * row_spacing + 18
-    pygame.draw.circle(screen, config.PELLET_COLOR, (center_x - 70, pellet_y), 7)
+    pygame.draw.circle(screen, config.WHITE, (center_x - 70, pellet_y), 7)
     draw_text('10 PTS', menu_font, config.WHITE, center_x - 20, pellet_y - 13)
 
-    pygame.draw.circle(screen, config.PELLET_COLOR, (center_x - 70, pellet_y + 62), 14)
+    pygame.draw.circle(screen, config.WHITE, (center_x - 70, pellet_y + 62), 14)
     draw_text('50 PTS', menu_font, config.WHITE, center_x - 20, pellet_y + 49)
 
     # Animação contínua inspirada na tela original.

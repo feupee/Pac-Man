@@ -325,6 +325,18 @@ def main():
         else:
             moving = True
 
+        game_won = has_player_won(level)
+
+        # Após a vitória, alterna a cor das paredes entre azul e cinza.
+        # O contador já existente varia entre 0 e 19.
+        if game_won:
+            if counter < 10:
+                config.BOARD_COLOR = 'blue'
+            else:
+                config.BOARD_COLOR = 'gray'
+        else:
+            config.BOARD_COLOR = 'blue'
+
         game_surface.fill('black')
         board_surface.fill('black')
         draw_board(board_surface, level, flicker)
@@ -336,7 +348,6 @@ def main():
             ghost_state['clyde']['dead'],
         ]
         ghost_speeds = calculate_ghost_speeds(powerup, eaten_ghost, dead_flags)
-        game_won = has_player_won(level)
 
         if not startup_active:
             bonus.draw(board_surface)
