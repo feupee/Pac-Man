@@ -70,6 +70,14 @@ GHOST_STARTS = {
     'pinky': {'x': 430, 'y': 410, 'direction': 2},
     'clyde': {'x': 370, 'y': 410, 'direction': 3},
 }
+# Tempo necessário para liberar cada fantasma da caixa.
+GHOST_RELEASE_DELAYS = {
+    'blinky': 0,
+    'pinky': 0,
+    'inky': 3 * FPS,
+    'clyde': 5 * FPS,
+}
+
 GHOST_IMAGE_PATHS = {
     # Cada direção possui dois frames de animação.
     # 0-RIGHT, 1-LEFT, 2-UP, 3-DOWN
@@ -108,7 +116,7 @@ GHOST_IMAGE_PATHS = {
 }
 
 # Configurações fixas da partida
-INITIAL_LIVES = 0
+INITIAL_LIVES = 3
 POWERUP_DURATION = 480
 STARTUP_DELAY = 270
 DEATH_ANIMATION_DURATION = 120

@@ -1,415 +1,16 @@
 import copy
 import math
 import pygame
-
 import config
-from board import boards, rotacionar_board_180
-from ghost import Ghost, calculate_ghost_speeds, get_targets
+
+from board import *
+from ghost import *
 from pacman import Pacman
 from leaderboard import add_score, load_leaderboard
 from start_screen import draw_leaderboard_screen, draw_start_screen
 from bonus import BonusFruit
-
-def load_sounds():
-    sounds = {}
-
-    for name,path in config.SOUND_PATHS.items():
-        sounds[name] = pygame.mixer.Sound(path)
-
-    return sounds
-
-
-def play_sound(sounds,name):
-    sound = sounds.get(name)
-
-    if sound:
-        sound.play()
-
-def load_scaled_image(path, size):
-    return pygame.transform.scale(pygame.image.load(path), size)
-
-
-def load_font(path, size, fallback_path=None):
-    """Carrega uma fonte personalizada e usa uma alternativa quando necessário."""
-    for candidate in (path, fallback_path):
-        if candidate:
-            try:
-                return pygame.font.Font(candidate, size)
-            except (FileNotFoundError, OSError):
-                pass
-
-    return pygame.font.Font(None, size)
-
-
-def load_player_images():
-    return [
-        load_scaled_image(path, config.PLAYER_SPRITE_SIZE)
-        for path in config.PLAYER_IMAGE_PATHS
-    ]
-
-
-def load_ghost_images():
-    ghost_images = {}
-
-    for name, paths in config.GHOST_IMAGE_PATHS.items():
-        if name in ('spooked', 'dead'):
-            ghost_images[name] = [
-                load_scaled_image(path, config.GHOST_SPRITE_SIZE)
-                for path in paths
-            ]
-        else:
-            ghost_images[name] = {
-                direction: [
-                    load_scaled_image(path, config.GHOST_SPRITE_SIZE)
-                    for path in direction_paths
-                ]
-                for direction, direction_paths in paths.items()
-            }
-
-    return ghost_images
-
-
-def create_initial_ghost_state():
-    return {
-        name: {
-            'x': values['x'],
-            'y': values['y'],
-            'direction': values['direction'],
-            'dead': False,
-        }
-        for name, values in config.GHOST_STARTS.items()
-    }
-
-
-def draw_misc(
-    screen,
-    font,
-    score_font,
-    title_font,
-    score,
-    high_score,
-    powerup,
-    lives,
-    game_over,
-    game_won,
-    ready,
-    player_images
-):
-    center_x = screen.get_width() // 2
-
-    def draw_text(text, selected_font, color, x, y, center=False):
-        # False mantém o aspecto pixelado da fonte.
-        text_surface = selected_font.render(str(text), False, color)
-        text_rect = text_surface.get_rect()
-
-        if center:
-            text_rect.center = (x, y)
-        else:
-            text_rect.topleft = (x, y)
-
-        screen.blit(text_surface, text_rect)
-
-    def format_score(value):
-        # Mostra pelo menos dois dígitos.
-        return f'{value:02d}'
-
-    # Interface superior inspirada no arcade original.
-    title_y = 18
-    value_y = 48
-
-    draw_text(
-        '1UP',
-        score_font,
-        config.WHITE,
-        center_x - 280,
-        title_y,
-        center=True
-    )
-
-    draw_text(
-        'HIGH SCORE',
-        score_font,
-        config.WHITE,
-        center_x,
-        title_y,
-        center=True
-    )
-
-    draw_text(
-        '2UP',
-        score_font,
-        config.WHITE,
-        center_x + 280,
-        title_y,
-        center=True
-    )
-
-    draw_text(
-        format_score(score),
-        score_font,
-        config.WHITE,
-        center_x - 280,
-        value_y,
-        center=True
-    )
-
-    draw_text(
-        format_score(high_score),
-        score_font,
-        config.WHITE,
-        center_x,
-        value_y,
-        center=True
-    )
-
-    draw_text(
-        '00',
-        score_font,
-        config.WHITE,
-        center_x + 280,
-        value_y,
-        center=True
-    )
-
-    if powerup:
-        pygame.draw.circle(
-            screen,
-            'blue',
-            (center_x + 350, value_y),
-            7
-        )
-
-    # Interface inferior.
-    footer_top = config.TOP_UI_HEIGHT + config.BOARD_HEIGHT
-
-    life_width = config.LIFE_SPRITE_SIZE[0]
-    life_height = config.LIFE_SPRITE_SIZE[1]
-
-    life_sprite_y = (
-        footer_top
-        + (config.BOTTOM_UI_HEIGHT - life_height) // 2
-    )
-
-    life_sprite = pygame.transform.scale(
-        player_images[0],
-        config.LIFE_SPRITE_SIZE
-    )
-
-    for index in range(lives):
-        screen.blit(
-            life_sprite,
-            (
-                20 + index * (life_width + 10),
-                life_sprite_y
-            )
-        )
-
-    # Mensagens sobrepostas ao centro do tabuleiro.
-    message_width = 680
-    message_height = 130
-
-    message_x = (screen.get_width() - message_width) // 2
-    message_y = (
-        config.TOP_UI_HEIGHT
-        + (config.BOARD_HEIGHT - message_height) // 2
-    )
-
-    if game_over:
-        draw_text(
-            'GAME   OVER',
-            title_font,
-            'red',
-            center_x,
-            message_y + 45,
-            center=True
-        )
-
-    if game_won:
-        pygame.draw.rect(
-            screen,
-            'white',
-            [message_x, message_y, message_width, message_height],
-            0,
-            10
-        )
-
-        pygame.draw.rect(
-            screen,
-            'dark gray',
-            [
-                message_x + 10,
-                message_y + 10,
-                message_width - 20,
-                message_height - 20
-            ],
-            0,
-            10
-        )
-
-        draw_text(
-            'VICTORY',
-            title_font,
-            'green',
-            center_x,
-            message_y + 45,
-            center=True
-        )
-
-        draw_text(
-            'PRESS SPACE FOR MENU',
-            font,
-            config.WHITE,
-            center_x,
-            message_y + 88,
-            center=True
-        )
-
-    if ready:
-        draw_text(
-            'READY!',
-            score_font,
-            'yellow',
-            center_x,
-            config.TOP_UI_HEIGHT + config.BOARD_HEIGHT // 2 + 60,
-            center=True
-        )
-
-
-def draw_board(screen, level, flicker):
-    num1 = config.CELL_HEIGHT
-    num2 = config.CELL_WIDTH
-    pi = math.pi
-
-    for i in range(len(level)):
-        for j in range(len(level[i])):
-            if level[i][j] == 1:
-                pygame.draw.circle(screen, 'white', (j * num2 + (0.5 * num2), i * num1 + (0.5 * num1)), 4)
-            if level[i][j] == 2 and not flicker:
-                pygame.draw.circle(screen, 'white', (j * num2 + (0.5 * num2), i * num1 + (0.5 * num1)), 10)
-            if level[i][j] == 3:
-                pygame.draw.line(screen, config.BOARD_COLOR, (j * num2 + (0.5 * num2), i * num1),
-                                 (j * num2 + (0.5 * num2), i * num1 + num1), 3)
-            if level[i][j] == 4:
-                pygame.draw.line(screen, config.BOARD_COLOR, (j * num2, i * num1 + (0.5 * num1)),
-                                 (j * num2 + num2, i * num1 + (0.5 * num1)), 3)
-            if level[i][j] == 5:
-                pygame.draw.arc(screen, config.BOARD_COLOR,
-                                [(j * num2 - (num2 * 0.4)) - 2, (i * num1 + (0.5 * num1)), num2, num1],
-                                0, pi / 2, 3)
-            if level[i][j] == 6:
-                pygame.draw.arc(screen, config.BOARD_COLOR,
-                                [(j * num2 + (num2 * 0.5)), (i * num1 + (0.5 * num1)), num2, num1],
-                                pi / 2, pi, 3)
-            if level[i][j] == 7:
-                pygame.draw.arc(screen, config.BOARD_COLOR,
-                                [(j * num2 + (num2 * 0.5)), (i * num1 - (0.4 * num1)), num2, num1],
-                                pi, 3 * pi / 2, 3)
-            if level[i][j] == 8:
-                pygame.draw.arc(screen, config.BOARD_COLOR,
-                                [(j * num2 - (num2 * 0.4)) - 2, (i * num1 - (0.4 * num1)), num2, num1],
-                                3 * pi / 2, 2 * pi, 3)
-            if level[i][j] == 9:
-                pygame.draw.line(screen, 'white', (j * num2, i * num1 + (0.5 * num1)),
-                                 (j * num2 + num2, i * num1 + (0.5 * num1)), 3)
-
-
-def create_ghosts(screen, level, targets, speeds, ghost_images, ghost_state, powerup, eaten_ghost, counter, visible=True):
-    common_arguments = {
-        'screen': screen,
-        'level': level,
-        'powerup': powerup,
-        'eaten_ghost': eaten_ghost,
-        'spooked_images': ghost_images['spooked'],
-        'dead_images': ghost_images['dead'],
-        'counter': counter,
-        'visible': visible,
-    }
-
-    blinky = Ghost(
-        ghost_state['blinky']['x'], ghost_state['blinky']['y'], targets[0], speeds[0], ghost_images['blinky'],
-        ghost_state['blinky']['direction'], ghost_state['blinky']['dead'], False, 0, **common_arguments
-    )
-
-    inky = Ghost(
-        ghost_state['inky']['x'], ghost_state['inky']['y'], targets[1], speeds[1], ghost_images['inky'],
-        ghost_state['inky']['direction'], ghost_state['inky']['dead'], False, 1, **common_arguments
-    )
-    pinky = Ghost(
-        ghost_state['pinky']['x'], ghost_state['pinky']['y'], targets[2], speeds[2], ghost_images['pinky'],
-        ghost_state['pinky']['direction'], ghost_state['pinky']['dead'], False, 2, **common_arguments
-    )
-
-    clyde = Ghost(
-        ghost_state['clyde']['x'], ghost_state['clyde']['y'], targets[3], speeds[3], ghost_images['clyde'],
-        ghost_state['clyde']['direction'], ghost_state['clyde']['dead'], False, 3, **common_arguments
-    )
-
-    return [blinky, inky, pinky, clyde]
-
-
-def move_ghosts(ghosts, ghost_state):
-    blinky, inky, pinky, clyde = ghosts
-
-    if not blinky.dead and not blinky.in_box:
-        blinky_values = blinky.move_blinky()
-    else:
-        blinky_values = blinky.move_clyde()
-
-    if not pinky.dead and not pinky.in_box:
-        pinky_values = pinky.move_pinky()
-    else:
-        pinky_values = pinky.move_clyde()
-
-    if not inky.dead and not inky.in_box:
-        inky_values = inky.move_inky()
-    else:
-        inky_values = inky.move_clyde()
-
-    clyde_values = clyde.move_clyde()
-
-    for name, values in (
-        ('blinky', blinky_values),
-        ('inky', inky_values),
-        ('pinky', pinky_values),
-        ('clyde', clyde_values),
-    ):
-        ghost_state[name]['x'], ghost_state[name]['y'], ghost_state[name]['direction'] = values
-
-
-def player_hit_by_ghost(player_circle, ghosts, powerup, eaten_ghost):
-    if not powerup:
-        return any(player_circle.colliderect(ghost.rect) and not ghost.dead for ghost in ghosts)
-
-    return any(
-        player_circle.colliderect(ghost.rect) and eaten_ghost[index] and not ghost.dead
-        for index, ghost in enumerate(ghosts)
-    )
-
-
-def eat_available_ghosts(player_circle, ghosts, ghost_state, eaten_ghost, score):
-    ghost_names = ['blinky', 'inky', 'pinky', 'clyde']
-
-    for index, ghost in enumerate(ghosts):
-        if player_circle.colliderect(ghost.rect) and not ghost.dead and not eaten_ghost[index]:
-            ghost_state[ghost_names[index]]['dead'] = True
-            eaten_ghost[index] = True
-            score += (2 ** eaten_ghost.count(True)) * 100
-
-    return score
-
-
-def reset_round(player):
-    player.reset_position()
-    return create_initial_ghost_state()
-
-
-def has_player_won(level):
-    for row in level:
-        if 1 in row or 2 in row:
-            return False
-    return True
-
-
+from game import *
+from collision import create_hitbox
 
 def calculate_initial_display_size():
     """Calcula uma janela visível que caiba no monitor sem alterar a lógica do jogo."""
@@ -508,6 +109,7 @@ def main():
     targets = [(player.x_pos, player.y_pos)] * 4
     moving = False
     startup_counter = 0
+    release_counter = 0
     lives = config.INITIAL_LIVES
     game_over = False
     game_won = False
@@ -600,6 +202,7 @@ def main():
                         elif event.key in (pygame.K_RETURN,pygame.K_SPACE):
                             game_state = 'playing'
                             startup_counter = 0
+                            release_counter = 0
                             score_registered = False
                             play_sound(sounds,'start_game')
 
@@ -625,6 +228,7 @@ def main():
                         startup_counter = 0
                         direction_command = config.PLAYER_START_DIRECTION
                         ghost_state = reset_round(player)
+                        release_counter = 0
                         eaten_ghost = [False, False, False, False]
                         score = 0
                         bonus.reset()
@@ -648,6 +252,7 @@ def main():
 
                         direction_command = config.PLAYER_START_DIRECTION
                         ghost_state = reset_round(player)
+                        release_counter = 0
 
                         bonus.reset()
 
@@ -733,8 +338,6 @@ def main():
         ghost_speeds = calculate_ghost_speeds(powerup, eaten_ghost, dead_flags)
         game_won = has_player_won(level)
 
-        player_circle = pygame.Rect(player.center_x - 20, player.center_y - 20, 40, 40)
-
         if not startup_active:
             bonus.draw(board_surface)
             player.draw(board_surface,counter)
@@ -772,9 +375,10 @@ def main():
 
         turns_allowed = player.check_position(level)
         if moving:
+            release_counter += 1
             bonus.update()
             player.move(turns_allowed)
-            move_ghosts(ghosts,ghost_state)
+            move_ghosts(ghosts,ghost_state,release_counter)
 
         if moving:
             previous_score = score
@@ -785,14 +389,14 @@ def main():
                 level,score,powerup,power_counter,eaten_ghost
             )
 
-            current_player_rect = pygame.Rect(
-                player.center_x - 20,
-                player.center_y - 20,
+            current_player_hitbox = create_hitbox(
+                player.center_x,
+                player.center_y,
                 40,
                 40
             )
 
-            score += bonus.collect_if_colliding(current_player_rect)
+            score += bonus.collect_if_colliding(current_player_hitbox)
 
             collected_powerup = (
                 powerup
@@ -807,7 +411,7 @@ def main():
             elif score > previous_score:
                 play_sound(sounds,'eating')
 
-            if player_hit_by_ghost(player_circle, ghosts, powerup, eaten_ghost):
+            if player_hit_by_ghost(current_player_hitbox,ghosts,powerup,eaten_ghost):
                 if lives > 0:
                     lives -= 1
                     startup_counter = 0
@@ -819,6 +423,7 @@ def main():
                     elif death_counter >= config.DEATH_ANIMATION_DURATION:
                         death_counter = 0
                     ghost_state = reset_round(player)
+                    release_counter = 0
                     eaten_ghost = [False, False, False, False]
                     direction_command = config.PLAYER_START_DIRECTION
                 else:
@@ -831,7 +436,7 @@ def main():
                     elif death_counter >= config.DEATH_ANIMATION_DURATION:
                         death_counter = 0
             elif powerup:
-                score = eat_available_ghosts(player_circle, ghosts, ghost_state, eaten_ghost, score)
+                score = eat_available_ghosts(current_player_hitbox,ghosts,ghost_state,eaten_ghost,score)
 
         if score > high_score: 
             high_score = score

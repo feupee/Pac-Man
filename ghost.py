@@ -1,6 +1,118 @@
 import pygame
 import config
 
+from collision import create_hitbox
+
+def create_initial_ghost_state():
+    return {
+        name: {
+            'x': values['x'],
+            'y': values['y'],
+            'direction': values['direction'],
+            'dead': False,
+
+            # Fantasmas com atraso igual a zero começam liberados.
+            'released': config.GHOST_RELEASE_DELAYS[name] == 0,
+        }
+        for name,values in config.GHOST_STARTS.items()
+    }
+
+
+def create_ghosts(screen, level, targets, speeds, ghost_images, ghost_state, powerup, eaten_ghost, counter, visible=True):
+    common_arguments = {
+        'screen': screen,
+        'level': level,
+        'powerup': powerup,
+        'eaten_ghost': eaten_ghost,
+        'spooked_images': ghost_images['spooked'],
+        'dead_images': ghost_images['dead'],
+        'counter': counter,
+        'visible': visible,
+    }
+
+    blinky = Ghost(
+        ghost_state['blinky']['x'], ghost_state['blinky']['y'], targets[0], speeds[0], ghost_images['blinky'],
+        ghost_state['blinky']['direction'], ghost_state['blinky']['dead'], False, 0, **common_arguments
+    )
+
+    inky = Ghost(
+        ghost_state['inky']['x'], ghost_state['inky']['y'], targets[1], speeds[1], ghost_images['inky'],
+        ghost_state['inky']['direction'], ghost_state['inky']['dead'], False, 1, **common_arguments
+    )
+    pinky = Ghost(
+        ghost_state['pinky']['x'], ghost_state['pinky']['y'], targets[2], speeds[2], ghost_images['pinky'],
+        ghost_state['pinky']['direction'], ghost_state['pinky']['dead'], False, 2, **common_arguments
+    )
+
+    clyde = Ghost(
+        ghost_state['clyde']['x'], ghost_state['clyde']['y'], targets[3], speeds[3], ghost_images['clyde'],
+        ghost_state['clyde']['direction'], ghost_state['clyde']['dead'], False, 3, **common_arguments
+    )
+
+    return [blinky, inky, pinky, clyde]
+
+def can_release_ghost(name,ghost_state,release_counter):
+    """
+    Retorna True quando o fantasma já foi liberado ou quando seu tempo
+    mínimo de espera foi atingido.
+    """
+
+    if ghost_state[name]['released']:
+        return True
+
+    if release_counter >= config.GHOST_RELEASE_DELAYS[name]:
+        ghost_state[name]['released'] = True
+        return True
+
+    return False
+
+
+def keep_ghost_still(ghost):
+    """
+    Mantém a posição atual do fantasma enquanto ele aguarda sua liberação.
+    """
+
+    return ghost.x_pos,ghost.y_pos,ghost.direction
+
+def move_ghosts(ghosts,ghost_state,release_counter):
+    blinky,inky,pinky,clyde = ghosts
+
+    if can_release_ghost('blinky',ghost_state,release_counter):
+        if not blinky.dead and not blinky.in_box:
+            blinky_values = blinky.move_blinky()
+        else:
+            blinky_values = blinky.move_clyde()
+    else:
+        blinky_values = keep_ghost_still(blinky)
+
+    if can_release_ghost('pinky',ghost_state,release_counter):
+        if not pinky.dead and not pinky.in_box:
+            pinky_values = pinky.move_pinky()
+        else:
+            pinky_values = pinky.move_clyde()
+    else:
+        pinky_values = keep_ghost_still(pinky)
+
+    if can_release_ghost('inky',ghost_state,release_counter):
+        if not inky.dead and not inky.in_box:
+            inky_values = inky.move_inky()
+        else:
+            inky_values = inky.move_clyde()
+    else:
+        inky_values = keep_ghost_still(inky)
+
+    if can_release_ghost('clyde',ghost_state,release_counter):
+        clyde_values = clyde.move_clyde()
+    else:
+        clyde_values = keep_ghost_still(clyde)
+
+    for name,values in (
+        ('blinky',blinky_values),
+        ('inky',inky_values),
+        ('pinky',pinky_values),
+        ('clyde',clyde_values),
+    ):
+        ghost_state[name]['x'],ghost_state[name]['y'],ghost_state[name]['direction'] = values
 
 class Ghost:
     def __init__(
@@ -42,14 +154,21 @@ class Ghost:
         self.dead_images = dead_images
         self.turns, self.in_box = self.check_collisions()
 
-        # Retângulo utilizado somente para verificar colisões.
-        self.rect = pygame.Rect(
-            (self.center_x - 18, self.center_y - 18),
-            (36, 36)
-        )
+        # A hitbox é calculada manualmente pela propriedade hitbox.
 
         if visible:
             self.draw(screen, counter)
+
+    @property
+    def hitbox(self):
+        """Retorna a hitbox retangular atual do fantasma."""
+
+        return create_hitbox(
+            self.x_pos + 22,
+            self.y_pos + 22,
+            36,
+            36
+        )
 
     def draw(self, screen, counter):
         # Cada direção possui dois frames de animação.

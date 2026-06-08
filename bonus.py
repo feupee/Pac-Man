@@ -2,6 +2,8 @@ import math
 
 import pygame
 
+from collision import rectangles_collide
+
 
 def multiply_matrices(matrix_a,matrix_b):
     """
@@ -87,7 +89,7 @@ class BonusFruit:
         A hitbox não precisa acompanhar a rotação visual.
         """
 
-        return pygame.Rect(
+        return (
             self.x_pos - 16,
             self.y_pos - 26,
             32,
@@ -247,14 +249,14 @@ class BonusFruit:
             1
         )
 
-    def collect_if_colliding(self,player_rect):
+    def collect_if_colliding(self,player_hitbox):
         """
         Desativa a fruta quando o Pac-Man encosta nela.
 
         Retorna a pontuação obtida.
         """
 
-        if self.active and player_rect.colliderect(self.hitbox):
+        if self.active and rectangles_collide(player_hitbox,self.hitbox):
             self.active = False
             return 500
 

@@ -1,5 +1,7 @@
+import pygame
 import math
 import numpy as np
+import config
 
 # 0 = retângulo preto vazio,
 # 1 = pilula pequena,
@@ -47,50 +49,40 @@ boards = [
 [7, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8]
          ]
 
-angulo = math.radians(180)
+def draw_board(screen, level, flicker):
+    num1 = config.CELL_HEIGHT
+    num2 = config.CELL_WIDTH
+    pi = math.pi
 
-fator = [
-    [math.cos(angulo), -math.sin(angulo), 0],
-    [math.sin(angulo),  math.cos(angulo), 0],
-    [0,                 0,                1],
-]
-
-def rotacionar_board_180(board):
-    """
-    Cria uma cópia do tabuleiro rotacionada em 180 graus.
-
-    A posição de cada célula é alterada e os códigos das curvas
-    são substituídos para preservar a orientação visual correta.
-    """
-
-    conversao_blocos = {
-        0: 0,  # espaço vazio
-        1: 1,  # pílula pequena
-        2: 2,  # pílula grande
-        3: 3,  # parede vertical
-        4: 4,  # parede horizontal
-        5: 7,  # curva superior direita -> curva inferior esquerda
-        6: 8,  # curva superior esquerda -> curva inferior direita
-        7: 5,  # curva inferior esquerda -> curva superior direita
-        8: 6,  # curva inferior direita -> curva superior esquerda
-        9: 9,  # portão horizontal
-    }
-
-    quantidade_linhas = len(board)
-    quantidade_colunas = len(board[0])
-
-    board_rotacionado = [
-        [0 for _ in range(quantidade_colunas)]
-        for _ in range(quantidade_linhas)
-    ]
-
-    for linha in range(quantidade_linhas):
-        for coluna in range(quantidade_colunas):
-            nova_linha = quantidade_linhas - 1 - linha
-            nova_coluna = quantidade_colunas - 1 - coluna
-
-            bloco_original = board[linha][coluna]
-            board_rotacionado[nova_linha][nova_coluna] = conversao_blocos[bloco_original]
-
-    return board_rotacionado
+    for i in range(len(level)):
+        for j in range(len(level[i])):
+            if level[i][j] == 1:
+                pygame.draw.circle(screen, 'white', (j * num2 + (0.5 * num2), i * num1 + (0.5 * num1)), 4)
+            if level[i][j] == 2 and not flicker:
+                pygame.draw.circle(screen, 'white', (j * num2 + (0.5 * num2), i * num1 + (0.5 * num1)), 10)
+            if level[i][j] == 3:
+                pygame.draw.line(screen, config.BOARD_COLOR, (j * num2 + (0.5 * num2), i * num1),
+                                 (j * num2 + (0.5 * num2), i * num1 + num1), 3)
+            if level[i][j] == 4:
+                pygame.draw.line(screen, config.BOARD_COLOR, (j * num2, i * num1 + (0.5 * num1)),
+                                 (j * num2 + num2, i * num1 + (0.5 * num1)), 3)
+            if level[i][j] == 5:
+                pygame.draw.arc(screen, config.BOARD_COLOR,
+                                [(j * num2 - (num2 * 0.4)) - 2, (i * num1 + (0.5 * num1)), num2, num1],
+                                0, pi / 2, 3)
+            if level[i][j] == 6:
+                pygame.draw.arc(screen, config.BOARD_COLOR,
+                                [(j * num2 + (num2 * 0.5)), (i * num1 + (0.5 * num1)), num2, num1],
+                                pi / 2, pi, 3)
+            if level[i][j] == 7:
+                pygame.draw.arc(screen, config.BOARD_COLOR,
+                                [(j * num2 + (num2 * 0.5)), (i * num1 - (0.4 * num1)), num2, num1],
+                                pi, 3 * pi / 2, 3)
+            if level[i][j] == 8:
+                pygame.draw.arc(screen, config.BOARD_COLOR,
+                                [(j * num2 - (num2 * 0.4)) - 2, (i * num1 - (0.4 * num1)), num2, num1],
+                                3 * pi / 2, 2 * pi, 3)
+            if level[i][j] == 9:
+                pygame.draw.line(screen, 'white', (j * num2, i * num1 + (0.5 * num1)),
+                                 (j * num2 + num2, i * num1 + (0.5 * num1)), 3)
 
