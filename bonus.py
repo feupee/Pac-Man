@@ -6,8 +6,6 @@ import pygame
 def multiply_matrices(matrix_a,matrix_b):
     """
     Multiplica duas matrizes manualmente.
-
-    Não utiliza NumPy nem funções prontas de transformação.
     """
 
     result = []

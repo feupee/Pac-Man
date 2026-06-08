@@ -1,6 +1,5 @@
 import copy
 import math
-
 import pygame
 
 import config
@@ -15,13 +14,7 @@ def load_sounds():
     sounds = {}
 
     for name,path in config.SOUND_PATHS.items():
-        try:
-            sounds[name] = pygame.mixer.Sound(path)
-            print(f'Som carregado: {name} -> {path}')
-        except (FileNotFoundError,pygame.error) as error:
-            sounds[name] = None
-            print(f'Erro ao carregar o som: {name} -> {path}')
-            print(error)
+        sounds[name] = pygame.mixer.Sound(path)
 
     return sounds
 
@@ -92,6 +85,7 @@ def draw_misc(
     screen,
     font,
     score_font,
+    title_font,
     score,
     high_score,
     powerup,
@@ -221,42 +215,12 @@ def draw_misc(
     )
 
     if game_over:
-        pygame.draw.rect(
-            screen,
-            'white',
-            [message_x, message_y, message_width, message_height],
-            0,
-            10
-        )
-
-        pygame.draw.rect(
-            screen,
-            'dark gray',
-            [
-                message_x + 10,
-                message_y + 10,
-                message_width - 20,
-                message_height - 20
-            ],
-            0,
-            10
-        )
-
         draw_text(
-            'GAME OVER',
-            font,
+            'GAME   OVER',
+            title_font,
             'red',
             center_x,
             message_y + 45,
-            center=True
-        )
-
-        draw_text(
-            'PRESS SPACE FOR MENU',
-            font,
-            config.WHITE,
-            center_x,
-            message_y + 88,
             center=True
         )
 
@@ -284,7 +248,7 @@ def draw_misc(
 
         draw_text(
             'VICTORY',
-            font,
+            title_font,
             'green',
             center_x,
             message_y + 45,
@@ -670,6 +634,7 @@ def main():
                         game_won = False
                         score_registered = False
                         game_state = 'menu'
+                        
 
                     if event.key == pygame.K_r:
                         lives = config.INITIAL_LIVES
@@ -793,6 +758,7 @@ def main():
             game_surface,
             font,
             score_font,
+            title_font,
             score,
             high_score,
             powerup,

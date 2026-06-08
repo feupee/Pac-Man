@@ -1,10 +1,22 @@
 [
     {
         "name": "PLAYER ONE",
+        "score": 7900
+    },
+    {
+        "name": "PLAYER ONE",
         "score": 3800
     },
     {
         "name": "TWESTH",
         "score": 290
+    },
+    {
+        "name": "PLAYER ONE",
+        "score": 190
+    },
+    {
+        "name": "PLAYER ONE",
+        "score": 130
     }
 ]
